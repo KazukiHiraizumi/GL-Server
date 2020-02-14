@@ -11,10 +11,12 @@
 #include <winsock2.h>
 #include <ws2tcpip.h>
 
+#include <string>
+#include <queue>
+
 #define M_PI 3.14159265
 
 #include "cparser.h"
-
 
 static void error_callback(int error, const char* description){
     fputs(description, stderr);
@@ -30,11 +32,22 @@ float apixel;
 float px2gl(int px){
 	return 2*(float)px/width-1;
 }
-float a2f(char *s){
-	if(s==NULL) return 1;
-	else return atof(s);
+float a2f(std::string s){
+	return atof(s.c_str());
+}
+float fPOP(std::queue<std::string> q) {
+	std::string s = q.front();
+	q.pop();
+	return a2f(s);
+}
+const char *cPOP(std::queue<std::string> q) {
+	std::string s = q.front();
+	q.pop();
+	return s.c_str();
 }
 void drawWav(float lamda,float phase,float g0,float g180,int bin){
+	float lamda=, float phase, float g0, float g180, int bin
+	fprintf(stderr, "W %f %f %f %f %d\n",  lamda, phase, g0, g180, bin);
 	for(int i=0;i<width;i++){
 		float lx=px2gl(i);
 		float ip=(1+cos(2*M_PI*(lx/lamda-phase)))/2;
@@ -85,11 +98,9 @@ int main(void){
 	GLFWmonitor *monitor = monitors[mnumber-1];
 	const GLFWvidmode *mode = glfwGetVideoMode(monitor);
 	fprintf(stderr, "monitors %d %d %d\n", mnumber, mode->width, mode->height);
-//#ifdef KIOSK
-	GLFWwindow *window=glfwCreateWindow(mode->width,mode->height,"OKNGL",monitor,NULL);
-//#else
-//	GLFWwindow *window=glfwCreateWindow(1920,1080,"OKNGL",NULL,NULL);
-//#endif
+	GLFWwindow* window = mnumber>1?
+		glfwCreateWindow(mode->width, mode->height, "OKNGL", monitor, NULL):
+		glfwCreateWindow(mode->width * 3 / 4, mode->height * 3 / 4, "OKNGL", NULL, NULL);
 	if (!window){
 		glfwTerminate();
 		exit(EXIT_FAILURE);
@@ -152,47 +163,47 @@ int main(void){
   socklen_t clilen = sizeof(cli_addr);
 
 	double tsch=(float)glfwGetTime();
-  static char buffer[20000];
-  char **arg=NULL;
-  double gltm;
-  int seq=0;
+	static char buffer[20000];
+	double gltm=0;
+	int seq=0;
+	std::string cmd;
 CONNECT:
-  fprintf(stderr,"Waiting connection\n");
-  int newsockfd = accept(sockfd, (struct sockaddr *) &cli_addr, &clilen);
-  if (newsockfd < 0) {
-	  perror("ERROR on accept");
-	  goto QUIT;
-  }
+	fprintf(stderr,"Waiting connection\n");
+	int newsockfd = accept(sockfd, (struct sockaddr *) &cli_addr, &clilen);
+	if (newsockfd < 0) {
+		perror("ERROR on accept");
+		goto CONNECT;
+ }
+//  u_long val = 1;
+//  ioctlsocket(newsockfd, FIONBIO, &val);
 READ:
-  memset(buffer,0,20000);
-  int rdcount=recv(newsockfd, buffer, 20000, 0);
-  if(rdcount<=0){
-    perror("read socket error");
-    goto QUIT;
-  }
-  cparser_set(buffer);
-  seq=0;
-  arg=NULL;
+	memset(buffer,0,20000);
+	int rdcount=recv(newsockfd, buffer, 20000, 0);
+	if(rdcount<0){
+		fprintf(stderr,"no data");
+		goto QUIT;
+	}
+	cparser(buffer);
+	seq=0;
 PARSE:
-
-  glfwPollEvents();
-  if (glfwWindowShouldClose(window)) goto QUIT;
-	arg=cparser_next();
-	if(arg==NULL) goto READ;
-  if(seq==0){
-  	glClearColor(0.f,0.f,0.f,1.f);
-	  glClear(GL_COLOR_BUFFER_BIT|GL_DEPTH_BUFFER_BIT);
-	  glDisable(GL_LIGHTING);
-	  glLoadIdentity();
-	  glRotatef(0.f,1.f,0.f,0.f);
-  }
-  seq++;
-	switch(arg[0][0]){
+	glfwPollEvents();
+	if (glfwWindowShouldClose(window)) goto QUIT;
+	if(fifo.empty()) goto READ;
+	if(seq==0){
+		glClearColor(0.f,0.f,0.f,1.f);
+		glClear(GL_COLOR_BUFFER_BIT|GL_DEPTH_BUFFER_BIT);
+		glDisable(GL_LIGHTING);
+		glLoadIdentity();
+		glRotatef(0.f,1.f,0.f,0.f);
+	}
+	seq++;
+	cmd = POP(fifo);
+	switch(cmd.c_str()[0]){
 	case 'W':
-	  drawWav(a2f(arg[1]),a2f(arg[2]),a2f(arg[3]),a2f(arg[4]),strcmp(arg[5],"false"));
+	  drawWav(fPOP(fifo),fPOP(fifo),fPOP(fifo),a2f(POP(fifo)),strcmp(POP(fifo).c_str(),"false"));
 	  break;
 	case 'C':
-	  drawCircle(a2f(arg[1]),a2f(arg[2]),a2f(arg[3]),a2f(arg[4]));
+	  drawCircle(POP(fifo)),a2f(POP(fifo)),a2f(arg[3]),a2f(arg[4]));
 	  break;
 	case 'B':
 	  drawBand(a2f(arg[1]),a2f(arg[2]));
@@ -208,6 +219,8 @@ PARSE:
 RESPONSE:
 	fprintf(stderr,"Glfw swap buffer \n");
 	seq=0;
+	if((gltm - tsch)>0.1) glfwSwapInterval(3);
+	else glfwSwapInterval(1);
 	glfwSwapBuffers(window);
 	gltm=glfwGetTime();
 	sprintf(buffer,"%f\n",(gltm-tsch)*1000);

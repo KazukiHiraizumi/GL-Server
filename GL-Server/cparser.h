@@ -1,7 +1,11 @@
 #ifndef CPARSEH
 #define CPARSEH
 
-extern void cparser_set(char *);
-extern char **cparser_next(void);
+#include <queue>
+#include <string>
+
+extern std::queue<std::string> fifo;
+
+extern void cparser(char *);
 
 #endif
