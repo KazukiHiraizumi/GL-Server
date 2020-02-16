@@ -4,8 +4,8 @@
 #include <queue>
 #include <string>
 
-extern std::queue<std::string> fifo;
-
+extern int cparser_busy;
+extern std::queue<std::string> cparser_queue;
 extern void cparser(char *);
 
 #endif

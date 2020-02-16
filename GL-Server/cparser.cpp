@@ -7,10 +7,13 @@
 #include <queue>
 #include <sstream>
 #include <string>
+#include <mutex>
 
-std::queue<std::string> fifo;
+std::queue<std::string> cparser_queue;
+int cparser_busy=0;
 
 void cparser(char* buffer) {
+    cparser_busy = 1;
     std::stringstream ss;
     ss << buffer;
     std::string buf;
@@ -23,11 +26,12 @@ void cparser(char* buffer) {
             ss3 << buf2;
             std::string buf3;
             while (std::getline(ss3, buf3, ' ')) {
-                fifo.push(buf3);
+                cparser_queue.push(buf3);
             }
         }
-        fifo.push(std::string("*"));
+        if (!cparser_queue.empty()) cparser_queue.push(std::string("*"));
     }
+    cparser_busy = 0;
 }
 
 /*
