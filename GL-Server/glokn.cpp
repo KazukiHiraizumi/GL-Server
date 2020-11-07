@@ -1,5 +1,5 @@
 #include <GLFW/glfw3.h>
-#include <GL/glu.h>
+//#include <GL/glu.h>
 #include <stdio.h>
 #include <string.h>
 #include <ctype.h>
@@ -185,6 +185,7 @@ THREAD:
 	int cmd, wrcount;
 	double tsch = (float)glfwGetTime();
 	double gltm = 0;
+	int glsleep = 0;
 	GLFWmonitor** monitors;
 	GLFWmonitor* monitor;
 	int mnumber;
@@ -197,7 +198,7 @@ THREAD:
 	monitor = monitors[mnumber - 1];
 	//monitor = glfwGetPrimaryMonitor();
 	mode = glfwGetVideoMode(monitor);
-	fprintf(stderr, "monitors %d %d %d\n", mnumber, mode->width, mode->height);
+	fprintf(stderr, "GLmonitors %d %d %d\n", mnumber, mode->width, mode->height);
 	window = mnumber > 1 ?
 		glfwCreateWindow(mode->width, mode->height, "OKNGL", monitor, NULL) :
 		glfwCreateWindow(mode->width * 3 / 4, mode->height * 3 / 4, "OKNGL", NULL, NULL);
@@ -215,7 +216,7 @@ THREAD:
 	glLoadIdentity();
 	glOrtho(-1.f, 1.f, -aspect, aspect, 1.f, -1.f);
 	//glLoadIdentity();
-	gluLookAt(0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0);
+	//gluLookAt(0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0);
 
 	static GLfloat lightPosition[] = { -10.0,10.0,10.0,1.0 };
 	glLightfv(GL_LIGHT0, GL_POSITION, lightPosition);
@@ -281,8 +282,10 @@ PARSE:
 	}
 	goto PARSE;
 RESPONSE:
-	//fprintf(stderr,"Glfw swap buffer \n");
 	glfwSwapInterval(1);
+	glsleep=floor((gltm+0.016666-glfwGetTime())*1000)-3;
+	fprintf(stderr, "GL swap %d\n", glsleep);
+	if(glsleep>0) Sleep(glsleep);
 	glfwSwapBuffers(window);
 	gltm = glfwGetTime();
 	sprintf(buffer, "%f\n", (gltm - tsch) * 1000);
