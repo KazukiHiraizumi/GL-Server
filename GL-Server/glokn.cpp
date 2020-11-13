@@ -74,8 +74,8 @@ void drawWav(std::queue<std::string>& cont){
 		if(!bin) grey=g0*ip+g180*(1-ip);
 		glBegin(GL_LINES);
 		glColor3f(grey,grey,grey);
-		glVertex2f(lx,-aspect);
-		glVertex2f(lx, aspect);
+		glVertex2f(lx, -1);
+		glVertex2f(lx, 1);
 		glEnd();
 	}
 }
@@ -199,13 +199,16 @@ THREAD:
 	//monitor = glfwGetPrimaryMonitor();
 	mode = glfwGetVideoMode(monitor);
 	fprintf(stderr, "GLmonitors %d %d %d\n", mnumber, mode->width, mode->height);
-//	glfwWindowHint(GLFW_FLOATING, GL_TRUE);
-	glfwWindowHint(GLFW_DECORATED, GL_FALSE);
-	glfwWindowHint(GLFW_AUTO_ICONIFY, GL_FALSE);
-	window = mnumber > 1 ?
-		glfwCreateWindow(mode->width, mode->height, "OKNGL", monitor, NULL) :
-		glfwCreateWindow(mode->width * 3 / 4, mode->height * 3 / 4, "OKNGL", NULL, NULL);
-	if (!window) {
+	if(mnumber>1){
+		//glfwWindowHint(GLFW_FLOATING, GL_TRUE);
+		glfwWindowHint(GLFW_DECORATED, GL_FALSE);
+		glfwWindowHint(GLFW_AUTO_ICONIFY, GL_FALSE);
+		window=glfwCreateWindow(mode->width, mode->height, "OKNGL", monitor, NULL);
+	}
+	else{
+		window=glfwCreateWindow(mode->width * 3 / 4, mode->height * 3 / 4, "OKNGL", NULL, NULL);
+	}
+	if(!window){
 		glfwTerminate();
 		goto CLOSE;
 	}
@@ -213,34 +216,17 @@ THREAD:
 	glfwMakeContextCurrent(window);
 	glfwGetFramebufferSize(window, &width, &height);
 	fprintf(stderr, "Frame buffer %d %d\n", width,height);
-	aspect = (float)height*2 / width;
+	aspect = (float)height / width;
 	apixel = px2gl(1) - px2gl(0);
-	glViewport(0, 0, width, height);
-//	glMatrixMode(GL_PROJECTION);
-//	glLoadIdentity();
-//	glOrtho(-1.f, 1.f, -aspect, aspect, 1.f, -1.f);
-//	glLoadIdentity();
-//	gluLookAt(0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0);
-
-//	static GLfloat lightPosition[] = { -10.0,10.0,10.0,1.0 };
-//	glLightfv(GL_LIGHT0, GL_POSITION, lightPosition);
-//	static GLfloat lightAmbient[] = { 0.4,0.4,0.4,1.0 };
-//	glLightfv(GL_LIGHT0, GL_AMBIENT, lightAmbient);
-//	static GLfloat matFrontCol[] = {0.7,1.0,1.0,1.0};
-//	glMaterialfv(GL_FRONT,GL_DIFFUSE,matFrontCol);
-//	Depth Setting
-//	glDepthRange(0,255);
-//	//glDepthFunc(GL_LEQUAL);
-//	//glEnable(GL_DEPTH_TEST);
-//	glDisable(GL_DEPTH_TEST);
-//	glMatrixMode(GL_MODELVIEW);
+	glViewport(0,0, width, height);
+	glMatrixMode(GL_PROJECTION);
+	glLoadIdentity();
+	glOrtho(-1.f, 1.f, -aspect, aspect, -1.f, 1.f);
+	glDisable(GL_LIGHTING);
 	glfwSwapInterval(1);
 NEXT:
 	glClearColor(0.f, 0.f, 0.f, 1.f);
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-	glDisable(GL_LIGHTING);
-	glLoadIdentity();
-	glRotatef(0.f, 1.f, 0.f, 0.f);
 	if (!cplock) {
 		std::queue<std::string> cp;
 		if (!cparser_queue.empty()) {
@@ -288,7 +274,7 @@ RESPONSE:
 //	fprintf(stderr, "Swap\n");
 //	for(glswap=1;glsleep>11;glswap++)
 //		glsleep=floor((gltm+0.016666*glswap-glfwGetTime())*1000)-3;
-	Sleep(16);
+//	Sleep(16);
 	glfwSwapBuffers(window);
 	gltm = glfwGetTime();
 	sprintf(buffer, "%f\n", (gltm - tsch) * 1000);
